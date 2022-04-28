@@ -11,9 +11,8 @@ app.get('/', (req, res) => {
 
 let sockets = []
 
-function getSocketName(socket) {
-    if (socket.nickname === '') return socket.nickname;
-    else return socket.id;
+function getSocketNameById(id) {
+    return sockets.find(s => s.id === id).nickname;
 };
 
 io.on('connection', (socket) => {
@@ -21,13 +20,13 @@ io.on('connection', (socket) => {
         'id': socket.id,
         'nickname': socket.id,
     });
-    io.emit('chat message', getSocketName(socket) + ' has joined the server!');
+    io.emit('chat message', getSocketNameById(socket.id) + ' has joined the server!');
     io.emit('user update', JSON.stringify(sockets));
     socket.on('chat message', (msg) => {
         io.emit('chat message', msg);
     });
     socket.on('change nickname', (nickname) => {
-        let oldNickname = getSocketName(socket);
+        let oldNickname = getSocketNameById(socket.id);
         sockets.find(s => s.id === socket.id).nickname = nickname
         io.emit('chat message', oldNickname + ' has changed the nickname to ' + nickname);
         io.emit('user update', JSON.stringify([{'id':socket.id,'nickname':nickname}]));
@@ -35,10 +34,9 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => {
         const index = sockets.findIndex(s => s.id === socket.id)
         if (index > -1) {
-            sockets.splice(index, 1);
+            io.emit('chat message', getSocketNameById(sockets[index].id) + ' has left the server!');
+            io.emit('user disconnect', sockets.splice(index, 1)[0].id);
         }
-        io.emit('chat message', getSocketName(socket) + ' has left the server!');
-        io.emit('user disconnect', socket.id);
     });
 });
 
